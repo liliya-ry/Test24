@@ -1,3 +1,5 @@
+package org.example;
+
 import java.io.*;
 import java.nio.file.Path;
 
@@ -18,14 +20,14 @@ public class HttpResponse<T> {
         }
     }
 
-    private void readFirstLine(BufferedReader reader) throws IOException {
+    void readFirstLine(BufferedReader reader) throws IOException {
         String firstLine = reader.readLine();
         String[] firstLineParts = firstLine.split(" ");
         version = firstLineParts[0];
         statusCode = Integer.parseInt(firstLineParts[1]);
     }
 
-    private void readHeaders(BufferedReader reader) throws IOException {
+    void readHeaders(BufferedReader reader) throws IOException {
         for (String line = reader.readLine(); line != null && !line.isBlank(); line = reader.readLine()) {
             String[] parts = line.split(": ");
             if (parts.length != 2) {
@@ -54,11 +56,11 @@ public class HttpResponse<T> {
     }
 
     public static class BodyHandlers {
-        public static HttpResponse.BodyHandler<String> ofString() {
+        public static BodyHandler<String> ofString() {
             return new BodyHandlerOfString();
         }
 
-        public static HttpResponse.BodyHandler<Path> ofFile(Path file) {
+        public static BodyHandler<Path> ofFile(Path file) {
             return new BodyHandlerOfFile(file);
         }
     }

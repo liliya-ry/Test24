@@ -1,3 +1,5 @@
+package org.example;
+
 import java.io.*;
 import java.net.URI;
 import java.nio.file.*;
@@ -28,11 +30,11 @@ public class HttpRequest {
         return headers;
     }
 
-    public static HttpRequest.Builder newBuilder() {
+    public static Builder newBuilder() {
         return new Builder();
     }
 
-    public static HttpRequest.Builder newBuilder(URI uri) {
+    public static Builder newBuilder(URI uri) {
         return new Builder(uri);
     }
 
@@ -65,49 +67,49 @@ public class HttpRequest {
             httpRequest.headers.add("Upgrade-Insecure-Requests", "1");
         }
 
-        public HttpRequest.Builder uri(URI uri) {
+        public Builder uri(URI uri) {
             httpRequest.uri = uri;
             httpRequest.headers.add("Host", uri.getHost());
             addDefaultHeaders();
             return this;
         }
 
-        public HttpRequest.Builder GET() {
+        public Builder GET() {
             httpRequest.method = "GET";
             return this;
         }
 
-        public HttpRequest.Builder DELETE() {
+        public Builder DELETE() {
             httpRequest.method = "DELETE";
             return this;
         }
 
-        public HttpRequest.Builder POST(HttpRequest.BodyPublisher bodyPublisher) {
+        public Builder POST(BodyPublisher bodyPublisher) {
             return bodyQueryBuilder(bodyPublisher, "POST");
         }
 
-        public HttpRequest.Builder PUT(HttpRequest.BodyPublisher bodyPublisher) {
+        public Builder PUT(BodyPublisher bodyPublisher) {
             return bodyQueryBuilder(bodyPublisher, "PUT");
         }
 
-        private HttpRequest.Builder bodyQueryBuilder(BodyPublisher bodyPublisher, String method) {
+        private Builder bodyQueryBuilder(BodyPublisher bodyPublisher, String method) {
             httpRequest.method = method;
             httpRequest.bodyPublisher = bodyPublisher;
             httpRequest.headers.add("Content-Length", String.valueOf(bodyPublisher.contentLength));
             return this;
         }
 
-        public HttpRequest.Builder setHeader(String name, String value) {
+        public Builder setHeader(String name, String value) {
             httpRequest.headers.replace(name, value);
             return this;
         }
 
-        public HttpRequest.Builder header(String name, String value) {
+        public Builder header(String name, String value) {
             httpRequest.headers.add(name, value);
             return this;
         }
 
-        public HttpRequest.Builder headers(String... headers) {
+        public Builder headers(String... headers) {
             if (headers.length % 2 != 0)
                 throw new IllegalStateException("Headers length is odd.");
 
@@ -129,33 +131,33 @@ public class HttpRequest {
     }
 
     public static class BodyPublishers {
-        public static HttpRequest.BodyPublisher noBody() {
+        public static BodyPublisher noBody() {
             return new BodyPublisher(null, 0);
         }
 
-        public static HttpRequest.BodyPublisher ofString(String s) {
+        public static BodyPublisher ofString(String s) {
             var bais = new ByteArrayInputStream(s.getBytes());
             return new BodyPublisher(bais, s.length());
         }
 
-        public static HttpRequest.BodyPublisher fromFile(Path path) throws IOException {
+        public static BodyPublisher fromFile(Path path) throws IOException {
             File f = new File(path.toString());
             var fis = new FileInputStream(f);
             long contentLength = f.length();
             return new BodyPublisher(fis, contentLength);
         }
 
-        public static HttpRequest.BodyPublisher ofInputStream(Supplier<? extends InputStream> streamSupplier) throws IOException {
+        public static BodyPublisher ofInputStream(Supplier<? extends InputStream> streamSupplier) throws IOException {
             InputStream in = streamSupplier.get();
             return new BodyPublisher(in, in.available());
         }
 
-        public static HttpRequest.BodyPublisher ofByteArray(byte[] buf) {
+        public static BodyPublisher ofByteArray(byte[] buf) {
             var bais = new ByteArrayInputStream(buf);
             return new BodyPublisher(bais, buf.length);
         }
 
-        public static HttpRequest.BodyPublisher ofByteArray(byte[] buf, int offset, int length) {
+        public static BodyPublisher ofByteArray(byte[] buf, int offset, int length) {
             var bais = new ByteArrayInputStream(buf, offset, length);
             return new BodyPublisher(bais, length);
         }

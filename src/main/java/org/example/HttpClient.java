@@ -1,3 +1,5 @@
+package org.example;
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -34,7 +36,7 @@ public class HttpClient {
             printBody(bodyPublisher, pw);
     }
 
-    private void printHeaders(HttpHeaders headers, PrintWriter pw) {
+    void printHeaders(HttpHeaders headers, PrintWriter pw) {
         for (Map.Entry<String, List<String>> headerEntry : headers.headers.entrySet()) {
             String headerName = headerEntry.getKey();
             List<String> headerValuesList = headerEntry.getValue();
@@ -46,7 +48,7 @@ public class HttpClient {
         pw.flush();
     }
 
-    private String buildHeaderValue(List<String> headerValuesList) {
+    String buildHeaderValue(List<String> headerValuesList) {
         String header = headerValuesList.get(0);
         for (int i = 1; i < headerValuesList.size(); i++) {
             header += ";" + headerValuesList.get(i);
@@ -54,7 +56,7 @@ public class HttpClient {
         return header;
     }
 
-    private void printBody(HttpRequest.BodyPublisher bodyPublisher, PrintWriter pw) throws IOException {
+    void printBody(HttpRequest.BodyPublisher bodyPublisher, PrintWriter pw) throws IOException {
         try (var bodyInputStream = bodyPublisher.body;
              var bufferIn = new BufferedInputStream(bodyInputStream)) {
             byte[] buffer = new byte[4 * 1024];
@@ -79,7 +81,7 @@ public class HttpClient {
             return httpClient;
         }
 
-        public HttpClient.Builder followRedirects(HttpClient.Redirect policy) {
+        public Builder followRedirects(Redirect policy) {
             httpClient.followRedirects = String.valueOf(policy);
             return this;
         }
