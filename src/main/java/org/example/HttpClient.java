@@ -23,17 +23,22 @@ public class HttpClient {
         }
     }
 
-    private void sendRequest(HttpRequest request, PrintWriter pw) throws IOException {
-        URI uri = request.uri();
-        String method = request.method();
-        pw.print(method + " " + uri.getPath() + " HTTP/1.1\r\n");
+    void sendRequest(HttpRequest request, PrintWriter pw) throws IOException {
+        printFirstLine(request, pw);
 
         HttpHeaders headers = request.headers();
         printHeaders(headers, pw);
 
+        String method = request.method();
         HttpRequest.BodyPublisher bodyPublisher = request.bodyPublisher().get();
         if ((method.equals("POST") || method.equals("PUT")) && bodyPublisher.body != null)
             printBody(bodyPublisher, pw);
+    }
+
+    void printFirstLine(HttpRequest request, PrintWriter pw) {
+        URI uri = request.uri();
+        String method = request.method();
+        pw.print(method + " " + uri.getPath() + " HTTP/1.1\r\n");
     }
 
     void printHeaders(HttpHeaders headers, PrintWriter pw) {

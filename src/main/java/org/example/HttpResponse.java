@@ -23,15 +23,27 @@ public class HttpResponse<T> {
     void readFirstLine(BufferedReader reader) throws IOException {
         String firstLine = reader.readLine();
         String[] firstLineParts = firstLine.split(" ");
+        if (firstLineParts.length > 3) {
+            throw new IOException("Invalid first line");
+        }
+
         version = firstLineParts[0];
-        statusCode = Integer.parseInt(firstLineParts[1]);
+        if (!version.equals("HTTP/1.1") && !version.equals("HTTP/2.0")) {
+            throw new IOException("Invalid protocol");
+        }
+
+        try {
+            statusCode = Integer.parseInt(firstLineParts[1]);
+        } catch (NumberFormatException e) {
+            throw new IOException("Invalid status code");
+        }
     }
 
     void readHeaders(BufferedReader reader) throws IOException {
         for (String line = reader.readLine(); line != null && !line.isBlank(); line = reader.readLine()) {
             String[] parts = line.split(": ");
             if (parts.length != 2) {
-                throw new IOException("invalid headers");
+                throw new IOException("Invalid headers");
             }
             String headerName = parts[0];
             String headerValue = parts[1];
@@ -74,7 +86,7 @@ public class HttpResponse<T> {
         @Override
         public String readBody(BufferedReader br, long contentLength) throws IOException {
             StringBuilder sb = new StringBuilder();
-            for (long redBytes = 0; br.ready() || redBytes < contentLength; redBytes++) {
+            for (long redBytes = 0; br.ready() && redBytes < contentLength; redBytes++) {
                 char ch = (char) br.read();
                 sb.append(ch);
             }
@@ -94,7 +106,7 @@ public class HttpResponse<T> {
         public Path readBody(BufferedReader br, long contentLength) throws IOException {
             try (var fileWriter = new FileWriter(path.toString());
                  var pw = new PrintWriter(fileWriter)) {
-                for (long redBytes = 0; br.ready() || redBytes < contentLength; redBytes++) {
+                for (long redBytes = 0; br.ready(); redBytes++) {
                     char ch = (char) br.read();
                     pw.print(ch);
                 }

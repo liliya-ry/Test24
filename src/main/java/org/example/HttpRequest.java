@@ -22,6 +22,10 @@ public class HttpRequest {
         return uri;
     }
 
+    public String host() {
+        return headers.headers.get("Host").get(0);
+    }
+
     public Optional<BodyPublisher> bodyPublisher() {
         return Optional.of(bodyPublisher);
     }
@@ -47,6 +51,7 @@ public class HttpRequest {
 
         Builder(URI uri) {
             httpRequest = new HttpRequest();
+            checkUri(uri);
             httpRequest.uri = uri;
             httpRequest.headers.add("Host", uri.getHost());
             addDefaultHeaders();
@@ -56,7 +61,21 @@ public class HttpRequest {
             if (httpRequest.uri == null) {
                 throw new IllegalStateException("URI has not been set");
             }
+
+            if (httpRequest.method == null) {
+                httpRequest.method = "GET";
+            }
+
             return httpRequest;
+        }
+
+        private void checkUri(URI uri) {
+            String uriStr = uri.toString();
+            if (!uriStr.startsWith("http://") && !uriStr.startsWith("https://")) {
+                int lastIndex = uriStr.indexOf("://");
+                String scheme = lastIndex != -1 ? uriStr.substring(0, lastIndex) : "";
+                throw new IllegalStateException("Invalid URI scheme " + scheme);
+            }
         }
 
         private void addDefaultHeaders() {
@@ -65,9 +84,11 @@ public class HttpRequest {
             httpRequest.headers.add("Accept-Encoding", "gzip, deflate, br");
             httpRequest.headers.add("Connection", "close");
             httpRequest.headers.add("Upgrade-Insecure-Requests", "1");
+            httpRequest.headers.add("User-Agent", "Java-http-client/11.0.6");
         }
 
         public Builder uri(URI uri) {
+            checkUri(uri);
             httpRequest.uri = uri;
             httpRequest.headers.add("Host", uri.getHost());
             addDefaultHeaders();
@@ -100,11 +121,19 @@ public class HttpRequest {
         }
 
         public Builder setHeader(String name, String value) {
+            if (name.equals("Content-Length")) {
+                throw new IllegalStateException("Content-Length header is restricted");
+            }
+
             httpRequest.headers.replace(name, value);
             return this;
         }
 
         public Builder header(String name, String value) {
+            if (name.equals("Content-Length")) {
+                throw new IllegalStateException("Content-Length header is restricted");
+            }
+
             httpRequest.headers.add(name, value);
             return this;
         }
@@ -114,7 +143,7 @@ public class HttpRequest {
                 throw new IllegalStateException("Headers length is odd.");
 
             for (int i = 0; i < headers.length; i += 2)
-                httpRequest.headers.add(headers[i], headers[i + 1]);
+                header(headers[i], headers[i + 1]);
 
             return this;
         }
@@ -158,6 +187,9 @@ public class HttpRequest {
         }
 
         public static BodyPublisher ofByteArray(byte[] buf, int offset, int length) {
+            if (offset < 0 || length - offset > buf.length) {
+                throw new IndexOutOfBoundsException("invalid indexes");
+            }
             var bais = new ByteArrayInputStream(buf, offset, length);
             return new BodyPublisher(bais, length);
         }
