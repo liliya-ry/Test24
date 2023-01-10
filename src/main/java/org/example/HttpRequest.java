@@ -150,12 +150,18 @@ public class HttpRequest {
     }
 
     public static class BodyPublisher {
+        boolean isInputStream;
         InputStream body;
         long contentLength;
 
-        BodyPublisher(InputStream body, long contentLength) {
+        BodyPublisher(InputStream body, long contentLength, boolean isInputStream) {
             this.body = body;
             this.contentLength = contentLength;
+            this.isInputStream = isInputStream;
+        }
+
+        BodyPublisher(InputStream body, long contentLength) {
+            this(body, contentLength, false);
         }
     }
 
@@ -178,7 +184,8 @@ public class HttpRequest {
 
         public static BodyPublisher ofInputStream(Supplier<? extends InputStream> streamSupplier) throws IOException {
             InputStream in = streamSupplier.get();
-            return new BodyPublisher(in, in.available());
+            ByteArrayInputStream bais = new ByteArrayInputStream(in.readAllBytes());
+            return new BodyPublisher(bais, 0, true);
         }
 
         public static BodyPublisher ofByteArray(byte[] buf) {

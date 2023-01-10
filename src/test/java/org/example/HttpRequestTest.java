@@ -6,6 +6,7 @@ import org.junit.jupiter.api.*;
 
 import java.io.*;
 import java.net.*;
+import java.nio.file.Path;
 import java.util.*;
 
 class HttpRequestTest {
@@ -25,8 +26,8 @@ class HttpRequestTest {
         HttpRequest request = requestBuilder
                 .POST(HttpRequest.BodyPublishers.noBody())
                 .build();
-        String contentLengthStr = request.headers().headers.get("Content-Length").get(0);
-        assertEquals("0", contentLengthStr);
+        String actualContentLength = request.headers().headers.get("Content-Length").get(0);
+        assertEquals("0", actualContentLength);
     }
 
     @Test
@@ -36,8 +37,8 @@ class HttpRequestTest {
         HttpRequest request = requestBuilder
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
-        String contentLengthStr = request.headers().headers.get("Content-Length").get(0);
-        assertEquals(String.valueOf(body.length()), contentLengthStr);
+        String actualContentLength = request.headers().headers.get("Content-Length").get(0);
+        assertEquals(String.valueOf(body.length()), actualContentLength);
     }
 
     @Test
@@ -47,8 +48,8 @@ class HttpRequestTest {
         HttpRequest request = requestBuilder
                 .POST(HttpRequest.BodyPublishers.ofByteArray(body))
                 .build();
-        String contentLengthStr = request.headers().headers.get("Content-Length").get(0);
-        assertEquals(String.valueOf(body.length), contentLengthStr);
+        String actualContentLength = request.headers().headers.get("Content-Length").get(0);
+        assertEquals(String.valueOf(body.length), actualContentLength);
     }
 
     @Test
@@ -58,8 +59,21 @@ class HttpRequestTest {
         HttpRequest request = requestBuilder
                 .POST(HttpRequest.BodyPublishers.ofByteArray(body, 1, 4))
                 .build();
-        String contentLengthStr = request.headers().headers.get("Content-Length").get(0);
-        assertEquals("4", contentLengthStr);
+        String actualContentLength = request.headers().headers.get("Content-Length").get(0);
+        assertEquals("4", actualContentLength);
+    }
+
+    @Test
+    @DisplayName("Tests FromFile content length")
+    void bodyPublisherFromFile() throws IOException {
+        File f = new File("file.txt");
+        Path filePath = f.toPath();
+        HttpRequest request = requestBuilder
+                .POST(HttpRequest.BodyPublishers.fromFile(filePath))
+                .build();
+        String actualContentLength = request.headers().headers.get("Content-Length").get(0);
+        String expectedContentLength = String.valueOf(f.length());
+        assertEquals(expectedContentLength, actualContentLength);
     }
 
     @Test
@@ -76,16 +90,30 @@ class HttpRequestTest {
         HttpRequest request = requestBuilder
                 .POST(HttpRequest.BodyPublishers.ofInputStream(() -> new ByteArrayInputStream(body)))
                 .build();
-        String contentLengthStr = request.headers().headers.get("Content-Length").get(0);
-        assertEquals(String.valueOf(body.length), contentLengthStr);
+        String actualContentLength = request.headers().headers.get("Content-Length").get(0);
+        assertEquals("0", actualContentLength);
     }
 
     @Test
-    void testDefaultHeaders() {
+    void testDefaultHeaders1() {
         Map<String, String> expectedHeaders = generateExpectedHeaders();
         HttpRequest httpRequest = requestBuilder.build();
+        Map<String, List<String>> actualHeaders = httpRequest.headers().headers;
+        assertHeaders(expectedHeaders, actualHeaders);
+    }
+
+    @Test
+    void testDefaultHeaders2() throws URISyntaxException {
+        Map<String, String> expectedHeaders = generateExpectedHeaders();
+        URI uri = new URI("https://postman-echo.com/get");
+        HttpRequest httpRequest = HttpRequest.newBuilder().uri(uri).build();
+        Map<String, List<String>> actualHeaders = httpRequest.headers().headers;
+        assertHeaders(expectedHeaders, actualHeaders);
+    }
+
+    void assertHeaders(Map<String, String> expectedHeaders,  Map<String, List<String>> actualHeaders) {
         for (Map.Entry<String, String> expectedHeader : expectedHeaders.entrySet()) {
-            List<String> headerValue = httpRequest.headers().headers.get(expectedHeader.getKey());
+            List<String> headerValue = actualHeaders.get(expectedHeader.getKey());
             assertAll(
                     () -> assertNotNull(headerValue),
                     () -> assertEquals(1, headerValue.size()),

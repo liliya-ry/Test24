@@ -6,7 +6,6 @@ import java.util.*;
 
 public class HttpClient {
     private static final int HTTP_PORT = 80;
-    private String followRedirects;
 
     public static Builder newBuilder() {
         return new Builder();
@@ -15,22 +14,28 @@ public class HttpClient {
     public <T> HttpResponse<T> send(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) throws IOException {
         String host = request.uri().getHost();
         try (Socket socket = new Socket(host, HTTP_PORT);
-             PrintWriter pw = new PrintWriter(socket.getOutputStream());
+             OutputStream out = socket.getOutputStream();
              InputStream in = socket.getInputStream()) {
-
-            sendRequest(request, pw);
+            sendRequest(request, out);
             return new HttpResponse<>(in, responseBodyHandler);
         }
     }
 
-    void sendRequest(HttpRequest request, PrintWriter pw) throws IOException {
+    void sendRequest(HttpRequest request, OutputStream out) throws IOException {
+        PrintWriter pw = new PrintWriter(out);
         printFirstLine(request, pw);
 
-        HttpHeaders headers = request.headers();
-        printHeaders(headers, pw);
-
-        String method = request.method();
         HttpRequest.BodyPublisher bodyPublisher = request.bodyPublisher().get();
+        if (bodyPublisher.isInputStream) {
+            ByteArrayOutputStream baosBody = getBaosBody(bodyPublisher);
+            request.headers().replace("Content-Length", String.valueOf(baosBody.size()));
+            printHeaders(request.headers(), pw);
+            baosBody.writeTo(out);
+            return;
+        }
+
+        printHeaders(request.headers(), pw);
+        String method = request.method();
         if ((method.equals("POST") || method.equals("PUT")) && bodyPublisher.body != null)
             printBody(bodyPublisher, pw);
     }
@@ -64,15 +69,26 @@ public class HttpClient {
     void printBody(HttpRequest.BodyPublisher bodyPublisher, PrintWriter pw) throws IOException {
         try (var bodyInputStream = bodyPublisher.body;
              var bufferIn = new BufferedInputStream(bodyInputStream)) {
-            byte[] buffer = new byte[4 * 1024];
+            byte[] buffer = new byte[1024];
             for (int read; (read = bufferIn.read(buffer, 0, buffer.length)) != -1;) {
                 String s = new String(buffer, 0, read);
                 pw.write(s);
                 pw.flush();
             }
         }
-        pw.print("\r\n\r\n");
-        pw.flush();
+    }
+
+    ByteArrayOutputStream getBaosBody(HttpRequest.BodyPublisher bodyPublisher) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ByteArrayInputStream bais = (ByteArrayInputStream) bodyPublisher.body;
+
+        byte[] data = new byte[1024];
+        for (int nRead; (nRead = bais.read(data, 0, data.length)) != -1;) {
+            baos.write(data, 0, nRead);
+            baos.flush();
+        }
+
+        return baos;
     }
 
     public static class Builder {
@@ -85,12 +101,5 @@ public class HttpClient {
         public HttpClient build() {
             return httpClient;
         }
-
-        public Builder followRedirects(Redirect policy) {
-            httpClient.followRedirects = String.valueOf(policy);
-            return this;
-        }
     }
-
-    public enum Redirect {ALWAYS, NEVER, NORMAL}
 }

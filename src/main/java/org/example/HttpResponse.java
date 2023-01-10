@@ -106,7 +106,7 @@ public class HttpResponse<T> {
         public Path readBody(BufferedReader br, long contentLength) throws IOException {
             try (var fileWriter = new FileWriter(path.toString());
                  var pw = new PrintWriter(fileWriter)) {
-                for (long redBytes = 0; br.ready(); redBytes++) {
+                for (long redBytes = 0; br.ready() && redBytes < contentLength; redBytes++) {
                     char ch = (char) br.read();
                     pw.print(ch);
                 }

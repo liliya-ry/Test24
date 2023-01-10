@@ -14,6 +14,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class HttpClientTest {
+    URI uri;
+    String bodyStr;
     HttpRequest.Builder requestBuilder;
     HttpClient client;
 
@@ -24,10 +26,10 @@ class HttpClientTest {
     void setUp() throws URISyntaxException {
         //socket = mock(Socket.class);
         client = HttpClient.newBuilder().build();
-        String body = "some body";
-        URI uri = new URI("https://postman-echo.com/post");
+        bodyStr = "some body";
+        uri = new URI("https://postman-echo.com/post");
         requestBuilder = HttpRequest.newBuilder(uri)
-                .POST(HttpRequest.BodyPublishers.ofString(body));
+                .POST(HttpRequest.BodyPublishers.ofString(bodyStr));
     }
 
 //    @Test
@@ -124,5 +126,61 @@ class HttpClientTest {
         List<String> headerValues = List.of("value1", "value2", "value3");
         String headerValue = client.buildHeaderValue(headerValues);
         assertEquals("value1;value2;value3", headerValue);
+    }
+
+    @Test
+    void printBodyContentLength() throws IOException {
+        StringWriter out = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(out);
+        HttpRequest validRequest = requestBuilder.build();
+
+        HttpRequest.BodyPublisher bodyPublisher = validRequest.bodyPublisher().get();
+        client.printBody(bodyPublisher, printWriter);
+
+        String body = out.toString();
+        String expectedContentLength = validRequest.headers().headers.get("Content-Length").get(0);
+        String actualContentLength = String.valueOf(body.length());
+        assertEquals(expectedContentLength, actualContentLength);
+    }
+
+    @Test
+    void printBody() throws IOException {
+        StringWriter out = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(out);
+        HttpRequest validRequest = requestBuilder.build();
+        HttpRequest.BodyPublisher bodyPublisher = validRequest.bodyPublisher().get();
+        client.printBody(bodyPublisher, printWriter);
+
+        byte[] expectedBody = bodyStr.getBytes();
+        byte[] actualBody = out.toString().getBytes();
+        assertArrayEquals(expectedBody, actualBody);
+    }
+
+    @Test
+    void getBaosBody() throws IOException {
+        byte[] body = bodyStr.getBytes();
+        HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.ofInputStream(() -> new ByteArrayInputStream(body));
+        ByteArrayOutputStream baos = client.getBaosBody(bodyPublisher);
+        assertArrayEquals(baos.toByteArray(), body);
+    }
+
+    @Test
+    void inputStreamOutput() throws IOException {
+        byte[] body = bodyStr.getBytes();
+        HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.ofInputStream(() -> new ByteArrayInputStream(body));
+        HttpRequest validRequest = HttpRequest.newBuilder(uri).POST(bodyPublisher).build();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        client.sendRequest(validRequest, out);
+
+        String contentLengthHeader = validRequest.headers().headers.get("Content-Length").get(0);
+        String actualContentLength = String.valueOf(body.length);
+        assertEquals(contentLengthHeader, actualContentLength);
+    }
+
+    @Test
+    void stringOutput() {
+        HttpRequest request = requestBuilder.build();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        assertDoesNotThrow(() -> client.sendRequest(request, out));
     }
 }
