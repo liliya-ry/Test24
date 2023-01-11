@@ -13,12 +13,16 @@ public class HttpClient {
 
     public <T> HttpResponse<T> send(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) throws IOException {
         String host = request.uri().getHost();
-        try (Socket socket = new Socket(host, HTTP_PORT);
+        try (Socket socket = getSocket(host);
              OutputStream out = socket.getOutputStream();
              InputStream in = socket.getInputStream()) {
             sendRequest(request, out);
             return new HttpResponse<>(in, responseBodyHandler);
         }
+    }
+
+    Socket getSocket(String host) throws IOException {
+        return new Socket(host, HTTP_PORT);
     }
 
     void sendRequest(HttpRequest request, OutputStream out) throws IOException {

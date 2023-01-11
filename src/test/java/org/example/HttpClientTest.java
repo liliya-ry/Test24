@@ -1,4 +1,8 @@
 package org.example;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -9,9 +13,6 @@ import java.net.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-
 @ExtendWith(MockitoExtension.class)
 class HttpClientTest {
     URI uri;
@@ -19,12 +20,8 @@ class HttpClientTest {
     HttpRequest.Builder requestBuilder;
     HttpClient client;
 
-//    @Mock
-//    Socket socket;
-
     @BeforeEach
     void setUp() throws URISyntaxException {
-        //socket = mock(Socket.class);
         client = HttpClient.newBuilder().build();
         bodyStr = "some body";
         uri = new URI("https://postman-echo.com/post");
@@ -32,12 +29,30 @@ class HttpClientTest {
                 .POST(HttpRequest.BodyPublishers.ofString(bodyStr));
     }
 
-//    @Test
-//    void send() throws Exception {
-//        whenNew(Socket.class).withArguments(Mockito.anyString(), Mockito.anyInt()).thenReturn(socket);
-//        when(socket.getOutputStream()).thenReturn(System.out);
-//        client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-//    }
+    @Test
+    void send() throws Exception {
+        HttpRequest request = requestBuilder.build();
+        String host = request.host();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        String validResponseStr = """
+                HTTP/1.1 200 OK
+                Content-Type: text/html; charset=utf8
+                Content-Length: 9
+                
+                some body
+                """;
+        InputStream in = new ByteArrayInputStream(validResponseStr.getBytes());
+
+        Socket mockedSocket = mock(Socket.class);
+        when(mockedSocket.getInputStream()).thenReturn(in);
+        when(mockedSocket.getOutputStream()).thenReturn(out);
+
+        HttpClient mockedClient = spy(HttpClient.class);
+        when(mockedClient.getSocket(host)).thenReturn(mockedSocket);
+
+        assertNotNull(mockedClient.send(request, HttpResponse.BodyHandlers.ofString()));
+    }
 
     String getHeadersStr() {
         StringWriter out = new StringWriter();
